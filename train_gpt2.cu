@@ -651,8 +651,8 @@ void gpt2_build_from_random(GPT2 *model, int depth, int max_seq_len) {
     model->config.channels = channels;
     model->config.num_heads = num_heads;
     model->config.max_seq_len = max_seq_len;
-    model->config.vocab_size = 50257;
-    model->config.padded_vocab_size = 50304; // padded to 128
+    model->config.vocab_size = 32000;
+    model->config.padded_vocab_size = 32000; // padded to 128
 
     // fill in all the parameter tensor dimensions and types
     fill_in_parameter_sizes(model->param_elements, model->param_sizeof, model->config);
