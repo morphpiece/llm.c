@@ -20,17 +20,21 @@ import argparse
 import multiprocessing as mp
 import numpy as np
 import tiktoken
+from morphpiece import MorphPiece
 # from huggingface_hub import snapshot_download
 from datasets import load_dataset
 from tqdm import tqdm
 import argparse
-
+from functools import partial
 from data_common import write_datafile
 # ------------------------------------------
 
 parser = argparse.ArgumentParser(description="FineWeb dataset preprocessing")
 parser.add_argument("-v", "--version", type=str, default="10B", help="Which version of fineweb to use 10B|100B")
 parser.add_argument("-s", "--shard_size", type=int, default=10**8, help="Size of each shard in tokens")
+parser.add_argument("-t", "--tokenizer", type=str,default='tiktoken', help="Pick between morphpiece and hf tokenizer")
+parser.add_argument("-d", "--dataset_loc", type=str,default="/pfss/mlde/workspaces/mlde_wsp_MorphPiece/data/fineweb/", help="location of fineweb dataset")
+parser.add_argument("-o", "--output_loc", type=str,default="output", help="location of tokenized dataset")
 args = parser.parse_args()
 
 # FineWeb has a few possible subsamples available
@@ -43,19 +47,32 @@ elif args.version == "100B":
     remote_name = "sample-100BT"
 
 # create the cache the local directory if it doesn't exist yet
-DATA_CACHE_DIR = os.path.join(os.path.dirname(__file__), local_dir)
-os.makedirs(DATA_CACHE_DIR, exist_ok=True)
+DATA_CACHE_DIR = os.path.join(args.dataset_loc,args.output_loc)
+os.makedirs(DATA_CACHE_DIR, exist_ok=False)
+print('Processed data directory ', DATA_CACHE_DIR)
 
 # download the dataset
-fw = load_dataset("HuggingFaceFW/fineweb", name=remote_name, split="train")
+# fw = load_dataset("HuggingFaceFW/fineweb", name=remote_name, split="train")
+fw = load_dataset('parquet',data_dir=args.dataset_loc+"sample/10BT/",split='train')
 
 # init the tokenizer
-enc = tiktoken.get_encoding("gpt2")
-eot = enc._special_tokens['<|endoftext|>'] # end of text token
+if args.tokenizer=='morph':
+    enc = MorphPiece()
+    eot = enc.eos_token_id
+    enc_fn = partial(enc.encode,add_special_tokens=False)
+elif args.tokenizer=='tiktoken':
+    enc = tiktoken.get_encoding("gpt2")
+    eot = enc._special_tokens['<|endoftext|>'] # end of text token
+    enc_fn = partial(enc.encode_ordinary)
+else:                                                            
+    enc = AutoTokenizer.from_pretrained(args.tokenizer)
+    enc = enc.eos_token_id
+    enc_fn = partial(enc.encode,add_special_tokens=False)
+    
 def tokenize(doc):
     # tokenizes a single document and returns a numpy array of uint16 tokens
     tokens = [eot] # the special <|endoftext|> token delimits all documents
-    tokens.extend(enc.encode_ordinary(doc["text"]))
+    tokens.extend(enc_fn(doc["text"]))
     tokens_np = np.array(tokens)
     assert (0 <= tokens_np).all() and (tokens_np < 2**16).all(), "token dictionary too large for uint16"
     tokens_np_uint16 = tokens_np.astype(np.uint16)
