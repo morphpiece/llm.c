@@ -5,6 +5,9 @@ LDLIBS = -lm
 INCLUDES =
 CFLAGS_COND = -march=native
 
+# MPI Location
+MPI_PATH ?= /usr/local/mpi
+
 # Find nvcc
 SHELL_UNAME = $(shell uname)
 REMOVE_FILES = rm -f
@@ -196,10 +199,10 @@ else
     # Detect if running on macOS or Linux
     ifeq ($(SHELL_UNAME), Darwin)
       $(info ✗ Multi-GPU on CUDA on Darwin is not supported, skipping OpenMPI + NCCL support)
-    else ifeq ($(shell [ -d /usr/lib/x86_64-linux-gnu/openmpi/lib/ ] && [ -d /usr/lib/x86_64-linux-gnu/openmpi/include/ ] && echo "exists"), exists)
+    else ifeq ($(shell [ -d $(MPI_PATH)/lib/ ] && [ -d $(MPI_PATH)/include/ ] && echo "exists"), exists)
       $(info ✓ OpenMPI found, OK to train with multiple GPUs)
-      NVCC_INCLUDES += -I/usr/lib/x86_64-linux-gnu/openmpi/include
-      NVCC_LDFLAGS += -L/usr/lib/x86_64-linux-gnu/openmpi/lib/
+      NVCC_INCLUDES += -I$(MPI_PATH)/include/
+      NVCC_LDFLAGS += -L$(MPI_PATH)/lib/
       NVCC_LDLIBS += -lmpi -lnccl
       NVCC_FLAGS += -DMULTI_GPU
     else
@@ -253,6 +256,15 @@ $(NVCC_CUDNN): llmc/cudnn_att.cpp
 train_gpt2cu: train_gpt2.cu $(NVCC_CUDNN)
 	$(NVCC) $(NVCC_FLAGS) $(PFLAGS) $^ $(NVCC_LDFLAGS) $(NVCC_INCLUDES) $(NVCC_LDLIBS) $(CUDA_OUTPUT_FILE)
 
+train_gpt2cu_h: train_gpt2_h.cu $(NVCC_CUDNN)
+	$(NVCC) $(NVCC_FLAGS) $(PFLAGS) $^ $(NVCC_LDFLAGS) $(NVCC_INCLUDES) $(NVCC_LDLIBS) $(CUDA_OUTPUT_FILE)
+    
+train_gpt2cu_32k: train_gpt2_32k.cu $(NVCC_CUDNN)
+	$(NVCC) $(NVCC_FLAGS) $(PFLAGS) $^ $(NVCC_LDFLAGS) $(NVCC_INCLUDES) $(NVCC_LDLIBS) $(CUDA_OUTPUT_FILE)
+
+train_gpt2cu_32k_h: train_gpt2_32k_h.cu $(NVCC_CUDNN)
+	$(NVCC) $(NVCC_FLAGS) $(PFLAGS) $^ $(NVCC_LDFLAGS) $(NVCC_INCLUDES) $(NVCC_LDLIBS) $(CUDA_OUTPUT_FILE)
+    
 train_gpt2fp32cu: train_gpt2_fp32.cu
 	$(NVCC) $(NVCC_FLAGS) $^ $(NVCC_LDFLAGS) $(NVCC_INCLUDES) $(NVCC_LDLIBS) $(CUDA_OUTPUT_FILE)
 

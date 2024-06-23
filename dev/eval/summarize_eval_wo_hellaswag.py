@@ -17,7 +17,7 @@ key = {"arc_challenge_25shot.json": "acc_norm",
        }
 
 total = 0
-for test in ["arc_challenge_25shot.json", "gsm8k_5shot.json", "mmlu_5shot.json", "truthfulqa_0shot.json", "winogrande_5shot.json"]:
+for test in ["arc_challenge_25shot.json", "gsm8k_5shot.json", "hellaswag_10shot.json", "mmlu_5shot.json", "truthfulqa_0shot.json", "winogrande_5shot.json"]:
     data = json.loads(open("./%s/%s"%(RESULT, test)).read())
     r_count = 0
     r_total = 0
