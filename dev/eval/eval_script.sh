@@ -1,0 +1,1 @@
+for model in gpt2m_bpe_32k_20ksteps gpt2m_morph6k_32k_20ksteps gpt2m_morph15k_32k_20ksteps; do ./llm.c/dev/eval/run_eval.sh maveriq/$model $model; done

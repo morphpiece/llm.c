@@ -459,7 +459,7 @@ void gpt2_build_from_checkpoint(GPT2 *model, const char* checkpoint_path) {
     cudaCheck(cudaDeviceSynchronize());
 }
 
-void gpt2_build_from_random(GPT2 *model, int depth) {
+void gpt2_build_from_random(GPT2 *model, int depth, int T) {
     // init random (training from scratch)
 
     // parameterize the size of gpt2 based only on the depth of the model (num_layers)
@@ -474,8 +474,8 @@ void gpt2_build_from_random(GPT2 *model, int depth) {
     else { fprintf(stderr, "Unsupported depth for now\n"); exit(EXIT_FAILURE); }
     model->config.channels = channels;
     model->config.num_heads = num_heads;
-    model->config.max_seq_len = 1024;
-    model->config.vocab_size = 32000; //50257;
+    model->config.max_seq_len = T; // 1024;
+    model->config.vocab_size = 32000; // 50257;
     model->config.padded_vocab_size = 32000; //50304; padded to 128
 
     // fill in all the parameter tensor dimensions and types
@@ -1465,7 +1465,7 @@ int main(int argc, char *argv[]) {
     } else if (load_filename[0] == 'd') {
         int depth = atoi(load_filename + 1);
         if (depth > 1 && depth <= 1000) { // we're not going to train models this big right? heh
-            gpt2_build_from_random(&model, depth);
+            gpt2_build_from_random(&model, depth, T);
         } else {
             exit(EXIT_FAILURE);
         }
@@ -1609,7 +1609,7 @@ int main(int argc, char *argv[]) {
 
         // once in a while do model inference to print generated text (only rank 0)
         if (multi_gpu_config.process_rank == 0 && sample_every > 0 &&
-           (step > 0 && (step % sample_every) == 0 || last_step)) {
+           (step > 0 && (step % sample_every) == 0)) { // haris : removed last step
             NvtxRange generation_range("generation");
             unsigned long long sample_rng_state = 1337;
             // fill up gen_tokens with the <|endoftext|> token, which kicks off the generation
