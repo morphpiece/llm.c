@@ -31,26 +31,33 @@ from data_common import write_datafile
 parser = argparse.ArgumentParser(description="FineWeb dataset preprocessing")
 parser.add_argument("-v", "--version", type=str, default="10B", help="Which version of fineweb to use 10B|100B")
 parser.add_argument("-s", "--shard_size", type=int, default=10**8, help="Size of each shard in tokens")
+parser.add_argument("-d", "--data_dir", type=str, default=None, help="MorphPiece directory")
 args = parser.parse_args()
 
 # FineWeb has a few possible subsamples available
-assert args.version in ["10B", "100B"], "version must be one of 10B, 100B"
+# assert args.version in ["10B", "100B"], "version must be one of 10B, 100B"
 if args.version == "10B":
     local_dir = "fineweb10B"
     remote_name = "sample-10BT"
 elif args.version == "100B":
     local_dir = "fineweb100B"
     remote_name = "sample-100BT"
+else:
+    local_dir = args.version
 
 # create the cache the local directory if it doesn't exist yet
 DATA_CACHE_DIR = os.path.join(os.path.dirname(__file__), local_dir)
 os.makedirs(DATA_CACHE_DIR, exist_ok=True)
 
 # download the dataset
-fw = load_dataset("HuggingFaceFW/fineweb", name=remote_name, split="train")
+if args.version not in ["10B", "100B"]:
+    print('Loading dataset...', args.version)
+    fw = load_dataset(args.version, split="train")
+else:
+    fw = load_dataset("HuggingFaceFW/fineweb", name=remote_name, split="train")
 
 # init the tokenizer
-enc = MorphPiece()
+enc = MorphPiece(data_dir=args.data_dir)
 eot = enc.eos_token_id # end of text token
 def tokenize(doc):
     # tokenizes a single document and returns a numpy array of uint16 tokens
